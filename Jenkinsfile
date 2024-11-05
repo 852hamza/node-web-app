@@ -7,15 +7,13 @@ pipeline {
         REPOSITORY_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/node-web"
         IMAGE_NAME = 'my-node-app'
         EC2_INSTANCE_IP = '13.48.10.87'
-        SSH_KEY_PATH = 'path/to/Node-web-automation.pem' // Adjust the path to your SSH key
-        SSH_USER = 'ubuntu' // Adjust if needed
     }
 
     stages {
         stage('Checkout Code') {
             steps {
                 // Checkout the code from your GitHub repository
-                git ''
+                git 'https://github.com/852hamza/node-web-app.git'
             }
         }
 
@@ -50,15 +48,18 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 script {
-                    // SSH into the EC2 instance and deploy the Docker container
-                    sh """
-                    ssh -o StrictHostKeyChecking=no -i ${SSH_KEY_PATH} ${SSH_USER}@${EC2_INSTANCE_IP} << 'EOF'
-                        docker pull ${REPOSITORY_URI}:latest
-                        docker stop ${IMAGE_NAME} || true
-                        docker rm ${IMAGE_NAME} || true
-                        docker run -d --name ${IMAGE_NAME} -p 3000:3000 ${REPOSITORY_URI}:latest
-                    EOF
-                    """
+                    // Use the credentials stored in Jenkins
+                    withCredentials([sshUserPrivateKey(credentialsId: 'node-web', keyVariable: 'SSH_KEY')]) {
+                        // SSH into the EC2 instance and deploy the Docker container
+                        sh """
+                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${EC2_INSTANCE_IP} << 'EOF'
+                            docker pull ${REPOSITORY_URI}:latest
+                            docker stop ${IMAGE_NAME} || true
+                            docker rm ${IMAGE_NAME} || true
+                            docker run -d --name ${IMAGE_NAME} -p 3000:3000 ${REPOSITORY_URI}:latest
+                        EOF
+                        """
+                    }
                 }
             }
         }
