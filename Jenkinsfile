@@ -20,9 +20,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image
-                    sh "docker build -t ${IMAGE_NAME} ./node-js"
-                    sh "docker tag ${IMAGE_NAME}:latest ${REPOSITORY_URI}:latest"
+                    // Build the Docker image using the Docker plugin
+                    def app = docker.build(IMAGE_NAME, './node-js')
                 }
             }
         }
@@ -40,7 +39,9 @@ pipeline {
             steps {
                 script {
                     // Push the Docker image to ECR
-                    sh "docker push ${REPOSITORY_URI}:latest"
+                    docker.withRegistry('https://${REPOSITORY_URI}', 'ecr:aws') {
+                        app.push('latest')
+                    }
                 }
             }
         }
